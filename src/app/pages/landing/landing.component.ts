@@ -1,6 +1,8 @@
 import { Component, OnInit, inject, HostListener, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { retryWhen, scan, delay } from 'rxjs/operators';
+import { throwError } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DropdownService } from '../../shared/services/dropdown.service';
@@ -1340,7 +1342,23 @@ export class LandingComponent implements OnInit {
     // log the outgoing payload for debugging
     console.log('Analyze POST payload', postPayload);
 
-    this.http.post(analyzeUrl, postPayload).subscribe({
+    const maxAnalyzeRetries = 2; // retry a couple times on transient failures
+    this.http
+      .post(analyzeUrl, postPayload)
+      .pipe(
+        retryWhen((errors) =>
+          errors.pipe(
+            scan((acc: number, err: any) => {
+              if (acc >= maxAnalyzeRetries) {
+                throw err;
+              }
+              return acc + 1;
+            }, 0),
+            delay(3000)
+          )
+        )
+      )
+      .subscribe({
       next: (res: any) => {
         this.isLoading = false;
         this.isBlockingUI = false;
@@ -1387,7 +1405,7 @@ export class LandingComponent implements OnInit {
         }
         console.error('Analyze failed', err);
       }
-    });
+  });
   }
 
   // Build an analyze tree grouped by project name (from sessionStorage.reposData.details)
