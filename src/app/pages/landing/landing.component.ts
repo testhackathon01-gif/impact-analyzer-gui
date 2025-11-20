@@ -1356,7 +1356,17 @@ export class LandingComponent implements OnInit {
         } catch (e) {
           this.analyzeTreeData = [];
         }
-        this.showAnalyzeModal = true;
+        // ensure the loading overlay is removed from the DOM before opening the modal
+        try {
+          setTimeout(() => {
+            this.showAnalyzeModal = true;
+            try {
+              this.cdr.detectChanges();
+            } catch (e) {}
+          }, 0);
+        } catch (e) {
+          this.showAnalyzeModal = true;
+        }
         console.log('Analyze API response', res);
       },
       error: (err) => {
@@ -1364,7 +1374,17 @@ export class LandingComponent implements OnInit {
         this.isBlockingUI = false;
         this.analyzeResult = { error: true, message: 'Failed to call analyze API', detail: err, payload: postPayload };
         this.analyzeTreeData = [];
-        this.showAnalyzeModal = true;
+        // open modal after hiding loader
+        try {
+          setTimeout(() => {
+            this.showAnalyzeModal = true;
+            try {
+              this.cdr.detectChanges();
+            } catch (e) {}
+          }, 0);
+        } catch (e) {
+          this.showAnalyzeModal = true;
+        }
         console.error('Analyze failed', err);
       }
     });
