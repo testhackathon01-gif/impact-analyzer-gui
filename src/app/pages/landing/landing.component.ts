@@ -2538,13 +2538,20 @@ export class LandingComponent implements OnInit {
     const original = (this.selectedFile?.content ?? '').split('\n');
     const modified = (this.secondaryContent || '').split('\n');
 
+    // Normalize lines for comparison to avoid false positives from trailing/leading
+    // whitespace or different newline conventions. We keep the original content
+    // for display but compare using trimmed values.
+    const origNorm = original.map((l) => String(l ?? '').replace(/\s+$/g, ''));
+    const modNorm = modified.map((l) => String(l ?? '').replace(/\s+$/g, ''));
+
     const m = original.length;
     const n = modified.length;
     // Build LCS matrix (m+1 x n+1)
     const lcs: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
     for (let i = m - 1; i >= 0; i--) {
       for (let j = n - 1; j >= 0; j--) {
-        if (original[i] === modified[j]) {
+        // use normalized comparison to tolerate whitespace-only differences
+        if (origNorm[i] === modNorm[j]) {
           lcs[i][j] = 1 + lcs[i + 1][j + 1];
         } else {
           lcs[i][j] = Math.max(lcs[i + 1][j], lcs[i][j + 1]);
@@ -2557,12 +2564,15 @@ export class LandingComponent implements OnInit {
     let i = 0,
       j = 0;
     while (i < m || j < n) {
-      if (i < m && j < n && original[i] === modified[j]) {
+      if (i < m && j < n && origNorm[i] === modNorm[j]) {
+        // lines match (ignoring harmless whitespace differences)
         this.diffLines.push({ type: 'unchanged', content: original[i] });
         i++;
         j++;
       } else if (j < n && (i === m || lcs[i][j + 1] >= lcs[i + 1][j])) {
         // Prefer additions when LCS indicates so
+        // Only mark added if the normalized line differs from the original at this
+        // alignment; this avoids marking large unchanged regions as added.
         this.diffLines.push({ type: 'added', content: modified[j] });
         j++;
       } else if (i < m) {
