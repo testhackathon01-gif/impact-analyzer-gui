@@ -5,26 +5,34 @@
   --text: #2c3e50;
   --surface: #ffffff;
   --panel-bg: #f8f9fa;
+  --panel-text: #2c3e50;
+  --header-text-color: #e6eef6;
   --muted: #6c757d;
-  --primary: #007bff;
-  --primary-600: #0056b3;
+  --primary: #003b70;
+  --primary-red: #d9261c;
+  --primary-600: #32628c;
   --header-bg: #2c3e50;
   --header-text: #ffffff;
-  --shadow: rgba(44,62,80,0.18);
+  --shadow: rgba(44, 62, 80, 0.18);
+  --border-color: rgba(0, 0, 0, 0.06);
 }
 
 .theme-dark {
   /* Dark theme overrides */
   --bg: #071226; /* deep navy */
-  --text: #e6eef6;
-  --surface: #0b1220;
+  --text: #2c3e50;
+  --surface: #e6eef6;
   --panel-bg: #0f1724;
+  --panel-text: #e6eef6;
+  --header-text-color: #e6eef6;
   --muted: #9aa6b2;
-  --primary: #4f9aff;
-  --primary-600: #2c6fd6;
+  --primary: #003b70;
+  --primary-red: #d9261c;
+  --primary-600: #32628c;
   --header-bg: #041028;
   --header-text: #e6eef6;
-  --shadow: rgba(2,6,23,0.6);
+  --shadow: rgba(2, 6, 23, 0.6);
+  --border-color: rgba(255, 255, 255, 0.06);
 }
 .impact-modal-backdrop {
   position: fixed;
@@ -32,7 +40,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(44,62,80,0.25);
+  background: rgba(44, 62, 80, 0.25);
   z-index: 3000;
 }
 .impact-modal {
@@ -57,7 +65,7 @@
   align-items: center;
   padding: 18px 20px 12px 20px;
   background: var(--panel-bg);
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   font-weight: 500;
   font-size: 18px;
 }
@@ -74,10 +82,10 @@
   flex: 1;
   padding: 28px 32px;
   overflow-y: auto;
-  font-family: 'Consolas', monospace;
   font-size: 16px;
   background: var(--panel-bg);
   border-radius: 8px;
+  color: var(--panel-text);
 }
 /* Main layout */
 .landing-container {
@@ -94,7 +102,7 @@
 }
 
 .main-app-header {
-  background-color: var(--header-bg);
+  background-color: var(--primary-red);
   color: var(--header-text);
   padding: 12px 24px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -125,7 +133,7 @@
   width: 280px;
   min-width: 280px;
   background-color: var(--panel-bg);
-  border-right: 1px solid rgba(0,0,0,0.06);
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -140,6 +148,7 @@
   padding: 16px 24px;
   width: 100%;
   overflow: hidden;
+  background-color: var(--panel-bg);
 }
 
 /* Dropdown styles */
@@ -156,24 +165,35 @@
   /* allow the inner tree content to show scrollbars when deeply nested items expand */
   overflow: visible;
   background: var(--surface);
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 4px;
-  margin-top: 8px;
+  margin-top: 16px;
 }
 
 .panel-header {
   padding: 12px;
   font-weight: 500;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--primary);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
+.select-repo-header {
+  border-radius: 1px;
+  margin: 0 4px 16px 0;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+
+.header-text-color {
+  color: var(--header-text-color);
+}
+
 /* Cosmetic: make the File Comparison header blue and center the text */
 .panel-header.main-header {
-  background: var(--primary);
+  background-color: var(--primary);
   color: var(--header-text);
   text-align: center;
   justify-content: center;
@@ -238,7 +258,7 @@
 .custom-select {
   width: 100%;
   background: var(--surface);
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 4px;
   position: relative;
 }
@@ -257,7 +277,7 @@
   left: 0;
   right: 0;
   background: var(--surface);
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   border-top: none;
   border-radius: 0 0 4px 4px;
   max-height: 200px;
@@ -274,7 +294,7 @@
   }
 
   &.selected {
-    background-color: rgba(0,0,0,0.04);
+    background-color: rgba(0, 0, 0, 0.04);
   }
 }
 
@@ -310,18 +330,19 @@
   white-space: pre-wrap;
 }
 
-.editor-toggle, .editor-sync {
+.editor-toggle,
+.editor-sync {
   padding: 8px 16px;
   border: 1px solid #dee2e6;
   border-radius: 4px;
   background-color: #fff;
   cursor: pointer;
   font-size: 14px;
-  
+
   &:hover {
     background-color: #f8f9fa;
   }
-  
+
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -334,9 +355,9 @@
   height: calc(100vh - 64px); /* account for padding and margins */
   width: 100%;
   overflow: hidden;
-  background: var(--surface);
+  background-color: var(--panel-bg);
   border-radius: 8px;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
@@ -360,7 +381,7 @@
   overflow: hidden;
   background: var(--surface);
   border-radius: 8px;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   margin: 0;
   height: calc(100vh - 120px); /* account for all margins and paddings */
 }
@@ -372,7 +393,8 @@
   padding: 16px;
   gap: 24px;
 
-    .left-pane, .right-pane {
+  .left-pane,
+  .right-pane {
     flex: 1;
     width: 50%;
     max-width: 50%;
@@ -385,7 +407,7 @@
 .diff-panel {
   flex: 1;
   overflow: auto;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 4px;
   background: var(--surface);
 }
@@ -417,8 +439,8 @@
   align-items: center;
   justify-content: center;
   min-height: 300px;
-  background-color: var(--panel-bg);
-  border: 1px solid rgba(0,0,0,0.06);
+  background-color: var(--surface);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   color: var(--muted);
   font-size: 14px;
@@ -429,7 +451,7 @@
   flex: 1;
   min-height: 300px;
   padding: 12px;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 4px;
   font-family: 'Consolas', monospace;
   font-size: 13px;
@@ -442,8 +464,8 @@
 }
 
 .file-editor:focus {
-  border-color: rgba(79,154,255,0.6);
-  box-shadow: 0 0 0 2px rgba(79,154,255,0.12);
+  border-color: rgba(79, 154, 255, 0.6);
+  box-shadow: 0 0 0 2px rgba(79, 154, 255, 0.12);
 }
 
 .editor-actions-bottom {
@@ -478,72 +500,78 @@
     border-radius: 2px;
     margin: 1px 0;
   }
-  
-  .diff-added { 
+
+  .diff-added {
     background: #fff3e0; /* pale orange */
-    color: #e65100; 
+    color: #e65100;
   }
-  
-  .diff-removed { 
-    background: #ffebee; 
-    color: #c62828; 
-    text-decoration: line-through; 
+
+  .diff-removed {
+    background: #ffebee;
+    color: #c62828;
+    text-decoration: line-through;
   }
-  
-  .diff-changed { 
+
+  .diff-changed {
     background: #fff3e0; /* pale orange for changed lines too */
     color: #e65100;
     border-left: 2px solid #df6a46;
     padding-left: 6px;
   }
-  
-  .diff-unchanged { 
-    background: transparent; 
-    color: #333; 
+
+  .diff-unchanged {
+    background: transparent;
+    color: #333;
   }
 }
 
-  /* Global popup stacking rules (ensure popups render above app UI and modal backdrops)
+/* Global popup stacking rules (ensure popups render above app UI and modal backdrops)
      These are global to avoid component style encapsulation hiding popups. */
-  .ui-click-blocker {
-    position: fixed;
-    inset: 0;
-    z-index: 3000;
-    pointer-events: none; /* allow interactions where desired unless explicitly shown */
-  }
+.ui-click-blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  pointer-events: none; /* allow interactions where desired unless explicitly shown */
+}
 
-  /* Modal/backdrop ladder: modal backdrop above everything except dev tooling */
-  .impact-modal-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 4000;
-    background: rgba(0,0,0,0.45);
-  }
+/* Modal/backdrop ladder: modal backdrop above everything except dev tooling */
+.impact-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  background: rgba(0, 0, 0, 0.45);
+}
 
-  .impact-modal {
-    position: fixed;
-    z-index: 4001;
-    inset: 5vh 5vw; /* leave margins around the modal */
-  }
+.impact-modal {
+  position: fixed;
+  z-index: 4001;
+  inset: 5vh 5vw; /* leave margins around the modal */
+}
 
-  /* After-analyze centered backdrop should be under modals */
-  .after-analyze-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 3400;
-    background: rgba(0,0,0,0.45);
-  }
+/* After-analyze centered backdrop should be under modals */
+.after-analyze-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3400;
+  background: rgba(0, 0, 0, 0.45);
+}
 
-  /* Ensure anchored and non-anchored after-analyze popups appear above normal UI but below modals */
-  .after-analyze-popup,
-  .after-analyze-popup.anchored {
-    position: fixed;
-    z-index: 3500;
-    -webkit-transform: none;
-    transform: none;
-  }
+/* Ensure anchored and non-anchored after-analyze popups appear above normal UI but below modals */
+.after-analyze-popup,
+.after-analyze-popup.anchored {
+  position: fixed;
+  z-index: 3500;
+  -webkit-transform: none;
+  transform: none;
+}
 
-  /* Generic dropdown/popup option lists should overlay UI but be under modals */
-  .select-options {
-    z-index: 3200;
-  }
+/* Generic dropdown/popup option lists should overlay UI but be under modals */
+.select-options {
+  z-index: 3200;
+}
+
+.modal-controls {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}

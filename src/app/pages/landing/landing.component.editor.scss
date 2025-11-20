@@ -4,9 +4,9 @@
   display: flex;
   flex-direction: column;
   border: 1px solid #dee2e6;
-  margin: 0 24px 24px;
   border-radius: 4px;
   overflow: hidden;
+  color: var(--header-text-color);
 
   &.split {
     margin-bottom: 0;
@@ -17,6 +17,9 @@
   }
 }
 
+.right-pane {
+  margin-right: 32px;
+}
 .editor-content {
   flex: 1;
   overflow: auto;
@@ -26,11 +29,12 @@
   &.readonly {
     background-color: #f8f9fa;
 
-    textarea, .file-editor {
+    textarea,
+    .file-editor {
       background-color: #f8f9fa;
       color: #6c757d;
       cursor: default;
-      
+
       &:focus {
         outline: none;
         box-shadow: none;
@@ -43,7 +47,8 @@
     }
   }
 
-  textarea, .file-editor {
+  textarea,
+  .file-editor {
     width: 100%;
     height: 100%;
     border: none;
@@ -65,21 +70,21 @@
   padding: 16px;
   font-family: 'Courier New', Courier, monospace;
   line-height: 1.5;
-  
+
   .diff-line {
     margin: 0;
     white-space: pre-wrap;
-    
+
     &.diff-added {
       background-color: #e6ffe6;
       color: #1e7e34;
     }
-    
+
     &.diff-removed {
       background-color: #ffe6e6;
       color: #dc3545;
     }
-    
+
     &.diff-changed {
       background-color: #fff3cd;
       color: #856404;
