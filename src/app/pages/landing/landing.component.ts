@@ -326,7 +326,7 @@ import { ProfileMenuComponent } from '../../shared/components/profile-menu/profi
                               {{ isAnalyzeNodeExpanded(node.key) ? '▾' : '▸' }}
                             </button>
                             <span class="node-icon">{{
-                              node.children && node.children.length ? '📁' : '📄'
+                              node.children && node.children.length ? '📁' : '📘'
                             }}</span>
                             <span class="node-name">{{ node.name }}</span>
                             <span class="node-count" *ngIf="node.count">({{ node.count }})</span>
@@ -767,6 +767,8 @@ export class LandingComponent implements OnInit {
   selectedImpact: any = null;
   showRawImpactDetail = false;
   analyzeResult: any = null;
+  // store last analyze response so checkImpact can reuse it if desired
+  lastAnalyzeResponseForCheck: any = null;
   // secondary content undo history for compare pane
   secondaryHistory: string[] = [];
   secondaryHistoryIndex: number = -1;
@@ -1314,7 +1316,7 @@ export class LandingComponent implements OnInit {
 
     const postPayload: any = {
       compareRepositoryUrls,
-      localFilePath: payload.localFilePath,
+      //localFilePath: payload.localFilePath,
       targetFilename: payload.targetFilename,
       // newly requested key: selectedRepository holds the source repository value
       selectedRepository: sourceRepo,
@@ -1322,245 +1324,42 @@ export class LandingComponent implements OnInit {
       changedCode: this.secondaryContent ?? '',
     };
 
-    // For now use a mocked analyzer response (so UI demonstrates the Analyze modal immediately)
-    this.isLoading = false;
-    this.isBlockingUI = false;
-    const mockAnalyzeResponse: any[] = [
-      {
-        changedMember: 'calculateDiscount',
-        memberType: 'METHOD',
-        riskScore: 9,
-        summaryReasoning:
-          'Step 1: Analyze Contractual Change in Module A. The `calculateDiscount` method in `PricingUtility` has changed its return type from `double` to `BigDecimal`.',
-        testStrategy: {
-          scope:
-            'Modules impacted by the `calculateDiscount` return type change (from double to BigDecimal), focusing on compilation fixes, runtime null-safety, and precision validation.',
-          priority: 'HIGH',
-          testCasesRequired: [
-            {
-              moduleName: 'com.consumer.AuditService',
-              testType: 'Unit/Integration Test',
-              focus:
-                'Verify `printTaxAndInvoiceInfo` compiles after fixing the `BigDecimal` to `double` conversion. Validate the precision of the `calculateDiscount` result when converted back to `double` for audit checks.',
-            },
-            {
-              moduleName: 'com.app.order.OrderProcessor',
-              testType: 'Unit/Integration Test',
-              focus:
-                'Verify `processOrder` compiles after fixing the `BigDecimal` to `double` conversion. Validate the accuracy of the `appliedDiscount` and the final `total - appliedDiscount` calculation, ensuring no unexpected precision loss.',
-            },
-            {
-              moduleName: 'com.app.analytics.AnalyticsEngine',
-              testType: 'Unit/Integration Test',
-              focus:
-                'Verify `logDiscount` correctly handles the `BigDecimal` return type, specifically testing scenarios where `calculateDiscount` might theoretically return `null` (if applicable) to ensure `NullPointerException` is avoided. Validate the precision of the logged discount value.',
-            },
-          ],
-        },
-        actionableImpacts: [
-          {
-            moduleName: 'com.consumer.AuditService',
-            impactType: 'SYNTACTIC_BREAK',
-            issue:
-              'The `printTaxAndInvoiceInfo` method calls `pricingUtility.calculateDiscount` which now returns `BigDecimal`.',
-          },
-          {
-            moduleName: 'com.app.order.OrderProcessor',
-            impactType: 'SYNTACTIC_BREAK',
-            issue:
-              'The `processOrder` method calls `pricing.calculateDiscount` which now returns `BigDecimal`.',
-          },
-          {
-            moduleName: 'com.app.analytics.AnalyticsEngine',
-            impactType: 'RUNTIME_RISK',
-            issue: 'The `logDiscount` method now correctly handles the `BigDecimal` return type.',
-          },
-        ],
-      },
-      {
-        changedMember: 'getTaxRate',
-        memberType: 'METHOD',
-        riskScore: 8,
-        summaryReasoning:
-          'The `getTaxRate()` method in `PricingUtility` (Module A) has been modified.',
-        testStrategy: {
-          scope:
-            "Modules directly consuming the `getTaxRate()` method, focusing on validating the new tax rate's effect on calculations and reporting.",
-          priority: 'HIGH',
-          testCasesRequired: [
-            {
-              moduleName: 'com.app.invoicing.InvoiceGenerator',
-              testType: 'Unit/Integration Test',
-              focus:
-                'Verify `calculateTotalWithTax` uses the new tax rate (e.g., 8%) correctly and produces the expected total. Test with various subtotals.',
-            },
-            {
-              moduleName: 'com.consumer.AuditService',
-              testType: 'Integration Test',
-              focus:
-                'Verify `printTaxAndInvoiceInfo` correctly reflects the new tax rate in its output and that the `totalWithTax` reported matches the new calculation from `InvoiceGenerator`. Ensure audit logs reflect the updated rate.',
-            },
-          ],
-        },
-        actionableImpacts: [
-          {
-            moduleName: 'com.app.invoicing.InvoiceGenerator',
-            impactType: 'SEMANTIC_BREAK',
-            issue:
-              'The `calculateTotalWithTax` method will now use the new tax rate returned by `PricingUtility.getTaxRate()`.',
-          },
-          {
-            moduleName: 'com.consumer.AuditService',
-            impactType: 'SEMANTIC_BREAK',
-            issue:
-              'The `printTaxAndInvoiceInfo` method retrieves and prints the tax rate from `PricingUtility.getTaxRate()`.',
-          },
-        ],
-      },
-      {
-        changedMember: 'TAX_RATE',
-        memberType: 'FIELD/CONSTANT',
-        riskScore: 8,
-        summaryReasoning:
-          "Step 1: Analyze Contractual Change in Module A: The diff indicates a FIELD_MODIFIED for 'TAX_RATE'. The old declaration was 'private static final double TAX_RATE = 0.05;' and the new declaration is 'private static final double TAX_RATE = 0.08;'.",
-        testStrategy: {
-          scope:
-            "Comprehensive validation of all tax-related calculations within Module A. This includes unit tests for methods directly using 'TAX_RATE' and integration tests for public APIs that expose tax-dependent results.",
-          priority: 'HIGH',
-          testCasesRequired: [
-            {
-              moduleName: 'com.app.modulea.TaxCalculator',
-              testType: 'Unit/Integration',
-              focus:
-                'Verify all tax calculations correctly reflect the new 8% tax rate, ensuring no regressions and correct application of the updated business logic.',
-            },
-          ],
-        },
-        actionableImpacts: [
-          {
-            moduleName: 'com.app.modulea.TaxCalculator',
-            impactType: 'SEMANTIC_BREAK',
-            issue: 'The private static final TAX_RATE constant has changed from 0.05 to 0.08.',
-          },
-        ],
-      },
-      {
-        changedMember: 'PricingUtility',
-        memberType: 'CLASS/TYPE',
-        riskScore: 9,
-        summaryReasoning:
-          '1. Analyze Contractual Change in Module A (PricingUtility): The PricingUtility class has been modified.',
-        testStrategy: {
-          scope:
-            'Comprehensive testing is required for modules directly impacted by syntactic breaks, semantic changes, and new runtime risks.',
-          priority: 'HIGH',
-          testCasesRequired: [
-            {
-              moduleName: 'com.app.order.OrderProcessor',
-              testType: 'Unit/Integration',
-              focus:
-                'Verify successful compilation and correct discount application after fixing the BigDecimal to double conversion.',
-            },
-            {
-              moduleName: 'com.app.invoicing.InvoiceGenerator',
-              testType: 'Unit/Integration',
-              focus:
-                'Validate calculateTotalWithTax correctly applies the new 8% tax rate and that the business logic aligns with the updated tax policy.',
-            },
-            {
-              moduleName: 'com.app.analytics.AnalyticsEngine',
-              testType: 'Unit/Integration/Negative',
-              focus:
-                'Verify logDiscount correctly handles BigDecimal values, including precision, rounding, and robustly handles potential null returns from calculateDiscount (if applicable).',
-            },
-            {
-              moduleName: 'PricingUtility',
-              testType: 'Unit',
-              focus:
-                'Verify calculateDiscount returns BigDecimal with expected precision and rounding.',
-            },
-            {
-              moduleName: 'PricingUtility',
-              testType: 'Unit',
-              focus: 'Verify getTaxRate returns 0.08.',
-            },
-            {
-              moduleName: 'PricingUtility',
-              testType: 'Integration',
-              focus:
-                'Ensure the removal of getProductCodePrefix has no unintended side effects on the overall system.',
-            },
-          ],
-        },
-        actionableImpacts: [
-          {
-            moduleName: 'com.app.order.OrderProcessor',
-            impactType: 'SYNTACTIC_BREAK',
-            issue:
-              'The calculateDiscount method in PricingUtility now returns BigDecimal instead of double.',
-          },
-          {
-            moduleName: 'com.app.invoicing.InvoiceGenerator',
-            impactType: 'SEMANTIC_BREAK',
-            issue: 'The TAX_RATE constant in PricingUtility has changed from 0.05 to 0.08.',
-          },
-          {
-            moduleName: 'com.app.analytics.AnalyticsEngine',
-            impactType: 'RUNTIME_RISK',
-            issue:
-              'The calculateDiscount method now returns a BigDecimal object instead of a primitive double.',
-          },
-          {
-            moduleName: 'PricingUtility',
-            impactType: 'NO_IMPACT',
-            issue: 'The getProductCodePrefix method was removed as it was identified as dead code.',
-          },
-        ],
-      },
-      {
-        changedMember: 'PricingUtility.java',
-        memberType: 'METHOD',
-        riskScore: 1,
-        summaryReasoning:
-          'Step 1: Analyze Contractual Change in Module A. The change involves the removal of the public method `getProductCodePrefix()`.',
-        testStrategy: {
-          scope:
-            'Regression testing for the module where the dead code was removed and general integration tests to ensure no unforeseen side effects.',
-          priority: 'LOW',
-          testCasesRequired: [
-            {
-              moduleName: 'com.app.modulea.ProductService',
-              testType: 'Integration Test',
-              focus:
-                'Verify existing functionality of the ProductService module remains intact after dead code removal.',
-            },
-            {
-              moduleName: 'All',
-              testType: 'System/Regression Test',
-              focus:
-                'Ensure no hidden dependencies or unexpected runtime issues arise from the removal of the `getProductCodePrefix` method.',
-            },
-          ],
-        },
-        actionableImpacts: [
-          {
-            moduleName: 'com.app.modulea.ProductService',
-            impactType: 'NO_IMPACT',
-            issue: 'The method `getProductCodePrefix()` was removed from this module.',
-          },
-        ],
-      },
-    ];
+    // Make real HTTP call to the analyzer endpoint with the requested payload
+    this.isLoading = true;
+    this.isBlockingUI = true;
+    const analyzeUrl = 'http://localhost:8080/api/v1/impact/analyze';
 
-    // use the mock response to populate analyzeResult and the tree
-    this.analyzeResult = mockAnalyzeResponse;
-    try {
-      this.analyzeTreeData = this.buildAnalyzeTreeFromActionableImpacts(mockAnalyzeResponse);
-    } catch (e) {
-      this.analyzeTreeData = [];
-    }
-    this.showAnalyzeModal = true;
-    console.log('Impacted Files (mock)', mockAnalyzeResponse);
+    // log the outgoing payload for debugging
+    console.log('Analyze POST payload', postPayload);
+
+    this.http.post(analyzeUrl, postPayload).subscribe({
+      next: (res: any) => {
+        this.isLoading = false;
+        this.isBlockingUI = false;
+        this.analyzeResult = res;
+        this.lastAnalyzeResponseForCheck = res;
+        try {
+          if (Array.isArray(res) && res.length > 0 && Array.isArray(res[0].actionableImpacts)) {
+            this.analyzeTreeData = this.buildAnalyzeTreeFromActionableImpacts(res as any[]);
+          } else {
+            const impacted = res?.impactedModules ?? res?.affectedClasses ?? [];
+            this.analyzeTreeData = this.buildAnalyzeTreeFromImpactedModules(impacted);
+          }
+        } catch (e) {
+          this.analyzeTreeData = [];
+        }
+        this.showAnalyzeModal = true;
+        console.log('Analyze API response', res);
+      },
+      error: (err) => {
+        this.isLoading = false;
+        this.isBlockingUI = false;
+        this.analyzeResult = { error: true, message: 'Failed to call analyze API', detail: err, payload: postPayload };
+        this.analyzeTreeData = [];
+        this.showAnalyzeModal = true;
+        console.error('Analyze failed', err);
+      }
+    });
   }
 
   // Build an analyze tree grouped by project name (from sessionStorage.reposData.details)
@@ -3035,15 +2834,25 @@ export class LandingComponent implements OnInit {
       },
     ];
 
-    // Simulate API delay
+    // Simulate API delay; prefer using the last analyze response when available
     setTimeout(() => {
-      this.impactResult = mockImpactData;
+      const respAny = this.lastAnalyzeResponseForCheck ?? mockImpactData;
+      // normalize to array for counting/selecting
+      const resultArr = Array.isArray(respAny)
+        ? respAny
+        : Array.isArray((respAny as any)?.items)
+        ? (respAny as any).items
+        : [respAny];
+
+      this.impactResult = respAny;
 
       // Set report header info
-      this.impactAnalysisTitle = 'PricingUtility';
-      this.impactChangedCount = mockImpactData.length;
-      this.impactMaxRiskScore = Math.max(...mockImpactData.map((m) => m.riskScore || 0));
-      this.impactChangedMembers = mockImpactData;
+      this.impactAnalysisTitle = this.selectedFile?.name ?? 'Impact Analysis';
+      this.impactChangedCount = resultArr.length;
+      this.impactMaxRiskScore = resultArr.length
+        ? Math.max(...resultArr.map((m: any) => m.riskScore || (m.llmReport?.riskScore ?? 0)))
+        : 0;
+      this.impactChangedMembers = resultArr;
 
       // Auto-select first member
       if (this.impactChangedMembers.length > 0) {
@@ -3052,7 +2861,7 @@ export class LandingComponent implements OnInit {
 
       // build hierarchical contract tree for the popup (for graph view)
       try {
-        this.impactTree = this.buildImpactTreeFromResult(mockImpactData);
+        this.impactTree = this.buildImpactTreeFromResult(respAny);
         console.log('Impact Tree built:', this.impactTree);
       } catch (e) {
         console.error('Error building impact tree:', e);
@@ -3060,13 +2869,14 @@ export class LandingComponent implements OnInit {
       }
 
       // Log the data being passed to the visualization component
-      console.log('Impact Result (data for graph):', mockImpactData);
-      console.log('Sample actionableImpacts:', mockImpactData[0]?.actionableImpacts);
+      console.log('Impact Result (data for graph):', respAny);
+      console.log('Sample actionableImpacts:', resultArr[0]?.actionableImpacts);
 
       // prepare reasoning bullets from the response
       try {
-        const first = mockImpactData[0] ?? {};
-        const rawReasoning = first?.summaryReasoning ?? '';
+        const first = resultArr[0] ?? {};
+        const rawReasoning =
+          first?.summaryReasoning ?? first?.llmReport?.reasoning ?? first?.reasoning ?? '';
         this.reasoningBullets = this.parseReasoningToBullets(String(rawReasoning || ''));
         this.reasoningBulletsHtml = [];
       } catch (e) {
@@ -3078,7 +2888,7 @@ export class LandingComponent implements OnInit {
       this.selectedImpact = null;
       this.isChecking = false;
       this.isBlockingUI = false;
-      console.log('Impact check response', mockImpactData);
+      console.log('Impact check response', respAny);
 
       // Trigger change detection
       try {

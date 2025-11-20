@@ -18,7 +18,7 @@ export class DropdownService {
   // We transform that into a scalable shape consumed by the UI:
   // { status: 'success', data: [ { id, name }, ... ], details: { id: { id, name, url, description, files } } }
   getDropdownData(): Observable<any> {
-    const externalUrl = 'http://localhost:8080/api/v1/impact/repositories';
+    const externalUrl = 'http://localhost:8080/api/v1/impact/metadata/repos';
     return this.http.get<Record<string, Record<string, string>>>(externalUrl).pipe(
       map((raw) => {
         try {
