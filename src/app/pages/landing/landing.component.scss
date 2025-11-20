@@ -399,6 +399,74 @@
   border-radius: 4px;
 }
 
+/* Global analyzer loading overlay */
+.global-loader {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 6000;
+  pointer-events: none; /* allow backdrop/other blockers to control interactivity */
+}
+
+.loader-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  pointer-events: auto;
+}
+
+.loader-spinner {
+  position: relative;
+  z-index: 6001;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.spinner {
+  transform-origin: center;
+  animation: dash-rotate 1s linear infinite;
+}
+
+.spinner .path {
+  stroke: #fff;
+  stroke-linecap: round;
+  stroke-dasharray: 90;
+  stroke-dashoffset: 0;
+  stroke-width: 4;
+  opacity: 0.95;
+}
+
+@keyframes dash-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loader-text {
+  color: #ffffff;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  pointer-events: none;
+  box-shadow: 0 6px 20px rgba(2, 6, 23, 0.36);
+}
+
+/* slightly finer spinner for light backgrounds when used without backdrop */
+.global-loader.no-backdrop .loader-backdrop {
+  display: none;
+}
+
 .cancel-btn {
   padding: 6px 10px;
   background: transparent;
@@ -578,7 +646,7 @@
     color: var(--folder-color, #f59e0b); /* amber for folders */
   }
   .analyze-tree li.file > .analyze-node-row .node-icon {
-    color: var(--file-color, #fbbf24); /* yellow for files */
+    color: var(--file-color, #24acfb); /* yellow for files */
   }
 
   .modal-controls {

@@ -679,7 +679,15 @@ import { ProfileMenuComponent } from '../../shared/components/profile-menu/profi
           </div>
         </div>
       </div>
-      <div class="loading" *ngIf="isLoading">Loading...</div>
+      <div class="global-loader" *ngIf="isLoading">
+        <div class="loader-backdrop" aria-hidden="true"></div>
+        <div class="loader-spinner" role="status" aria-live="polite">
+          <svg class="spinner" viewBox="0 0 50 50" width="64" height="64" aria-hidden="true">
+            <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"></circle>
+          </svg>
+          <div class="loader-text">Analyzing changes…</div>
+        </div>
+      </div>
     </div>
     <!-- Anchored After-Analyze popup (anchored above the button). No backdrop; user must close manually. -->
     <!-- Centered After-Analyze popup (always use centered modal to avoid placement/top-left issues) -->
