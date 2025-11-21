@@ -3,12 +3,12 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve hackathon-app --host 0.0.0.0 --port 4200",
-    "start:public": "ng serve hackathon-app --host 0.0.0.0 --port 4200",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development",
-    "test": "ng test",
-    "serve:ssr:hackathon-app": "node dist/hackathon-app/server/server.mjs"
+    "start": "cross-env NODE_OPTIONS=--no-deprecation ng serve hackathon-app --host 0.0.0.0 --port 4200",
+    "start:public": "cross-env NODE_OPTIONS=--no-deprecation ng serve hackathon-app --host 0.0.0.0 --port 4200",
+    "build": "cross-env NODE_OPTIONS=--no-deprecation ng build",
+    "watch": "cross-env NODE_OPTIONS=--no-deprecation ng build --watch --configuration development",
+    "test": "cross-env NODE_OPTIONS=--no-deprecation ng test",
+    "serve:ssr:hackathon-app": "cross-env NODE_OPTIONS=--no-deprecation node dist/hackathon-app/server/server.mjs"
   },
   "prettier": {
     "printWidth": 100,
@@ -40,6 +40,7 @@
     "tslib": "^2.3.0"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "@angular/build": "^20.3.8",
     "@angular/cli": "^20.3.8",
     "@angular/compiler-cli": "^20.3.0",

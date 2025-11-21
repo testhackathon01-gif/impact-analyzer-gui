@@ -1,0 +1,717 @@
+<div class="landing-container">
+  <div class="ui-click-blocker" *ngIf="isBlockingUI" (click)="$event.stopPropagation()"></div>
+  <!-- Main Header -->
+  <div class="main-app-header">
+    <h1>Echo Lens</h1>
+    <app-profile-menu></app-profile-menu>
+  </div>
+  <div class="content-wrapper">
+    <!-- Left sidebar with dropdown and file tree -->
+    <div class="left-sidebar">
+      <!-- Dropdown section -->
+      <div class="panel-header select-repo-header header-text-color">SELECT REPOSITORY</div>
+      <div class="dropdown-container">
+        <div class="custom-select">
+          <div class="select-header" (click)="toggleDropdown()">
+            <span>{{
+              selectedItemId ? getSelectedItemName() || 'Select Repo...' : 'Select Repo...'
+            }}</span>
+            <span class="arrow">{{ isDropdownOpen ? '▾' : '▸' }}</span>
+          </div>
+          <div class="select-options" *ngIf="isDropdownOpen" (click)="$event.stopPropagation()">
+            <div
+              class="option-item"
+              (click)="resetSelection()"
+              [class.selected]="!selectedItemId"
+            >
+              Select Repo...
+            </div>
+
+            <!-- Normal dropdown list -->
+            <div *ngIf="!showRepoDetails">
+              <div
+                class="option-item"
+                *ngFor="let item of dropdownItems"
+                (click)="onOptionSelect(item)"
+                [class.selected]="selectedItemId === item.id.toString()"
+              >
+                {{ item.name }}
+              </div>
+            </div>
+
+            <!-- Analyze mode: show checkboxes for multiple repos -->
+            <div *ngIf="showRepoDetails">
+              <div class="option-item" *ngFor="let item of dropdownItems">
+                <label class="checkbox-label">
+                  <input
+                    type="checkbox"
+                    [checked]="selectedRepoIds.has(item.id)"
+                    (change)="toggleRepoSelection(item, $event)"
+                  />
+                  <span>{{ item.name }}</span>
+                </label>
+              </div>
+              <div class="dropdown-actions">
+                <button
+                  *ngIf="selectedRepoIds.size > 0"
+                  type="button"
+                  class="apply-btn"
+                  (click)="
+                    analyzeSelectedRepos(); $event.preventDefault(); $event.stopPropagation()
+                  "
+                >
+                  Analyze
+                </button>
+                <button
+                  type="button"
+                  class="cancel-btn"
+                  (click)="cancelAnalyze(); $event.preventDefault(); $event.stopPropagation()"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- File tree section -->
+      <div class="tree-panel">
+        <div class="panel-header header-text-color" [class.no-file]="!selectedFile">
+          <div
+            style="display:flex; align-items:center; gap:12px; width:100%; justify-content:space-between;"
+          >
+            <div style="font-weight:600">File Tree</div>
+            <div class="panel-controls" style="display:flex; gap:8px;">
+              <button
+                type="button"
+                class="control-btn"
+                (click)="expandAllFolders(); $event.stopPropagation()"
+                title="Expand all"
+              >
+                Expand All
+              </button>
+              <button
+                type="button"
+                class="control-btn"
+                (click)="collapseAllFolders(); $event.stopPropagation()"
+                title="Collapse all"
+              >
+                Collapse All
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="tree-content">
+          <ng-container *ngIf="fileTree && fileTree.length; else emptyTree">
+            <ng-container
+              *ngTemplateOutlet="fileTpl; context: { $implicit: fileTree }"
+            ></ng-container>
+            <ng-template #fileTpl let-nodes>
+              <ul class="tree-root">
+                <li
+                  *ngFor="let node of nodes"
+                  [class.folder]="node.type === 'folder'"
+                  [class.file]="node.type !== 'folder'"
+                >
+                  <div class="an-node-row node-row" (click)="onNodeClick(node)">
+                    <button
+                      *ngIf="node.type === 'folder'"
+                      type="button"
+                      class="node-toggle"
+                      (click)="$event.stopPropagation(); toggleFolder(node)"
+                    >
+                      {{ node.isExpanded ? '-' : '+' }}
+                    </button>
+                    <span class="node-icon">{{ getFileIcon(node) }}</span>
+                    <span class="node-name" [class.active]="selectedFile === node">{{
+                      node.name
+                    }}</span>
+                  </div>
+                  <div
+                    class="tree-children"
+                    *ngIf="node.children && node.children.length && node.isExpanded"
+                  >
+                    <ng-container
+                      *ngTemplateOutlet="fileTpl; context: { $implicit: node.children }"
+                    ></ng-container>
+                  </div>
+                </li>
+              </ul>
+            </ng-template>
+          </ng-container>
+          <ng-template #emptyTree>
+            <div class="editor-placeholder">No files loaded</div>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+    <!-- Main content -->
+    <div class="main-content">
+      <div class="editor-panel">
+        <div class="panel-header main-header">File Comparison</div>
+        <div class="editor-actions">
+          <div class="left-actions">
+            <button type="button" class="editor-toggle" (click)="toggleSplitView()">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                style="margin-right: 4px; vertical-align: text-bottom;"
+              >
+                <path fill="currentColor" d="M3 5v14h18V5H3zm16 12H5V7h14v10z" />
+                <path fill="currentColor" d="M11 7h2v10h-2z" />
+              </svg>
+              {{ isSplitView ? 'Single View' : 'Split Compare' }}
+            </button>
+            <button
+              type="button"
+              class="editor-sync"
+              (click)="syncEditors()"
+              [disabled]="!isSplitView"
+              [hidden]="isSplitView"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                style="margin-right: 4px; vertical-align: text-bottom;"
+              >
+                <path
+                  fill="currentColor"
+                  d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"
+                />
+              </svg>
+              Sync
+            </button>
+            <button
+              type="button"
+              class="undo-btn"
+              (click)="undoCompareChange()"
+              [disabled]="!canUndo"
+              *ngIf="isSplitView"
+              title="Undo last change in compare pane"
+            >
+              Undo
+            </button>
+          </div>
+          <button
+            type="button"
+            class="analyze-impact-btn"
+            (click)="startAnalyze(); $event.stopPropagation()"
+            [class.active]="analyzePending || selectedRepoIds.size > 0"
+            [disabled]="!canAnalyze"
+            [hidden]="isSplitView || selectedRepoIds.size === 0"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              style="margin-right:6px; vertical-align:text-bottom;"
+            >
+              <path
+                fill="currentColor"
+                d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zM9.5 14C7 14 5 12 5 9.5S7 5 9.5 5 14 7 14 9.5 12 14 9.5 14z"
+              />
+            </svg>
+            Analyze Impact
+          </button>
+
+          <button
+            type="button"
+            class="check-impact-btn"
+            (click)="onCheckImpactClick($event)"
+            [disabled]="!isSplitView || isChecking"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              style="margin-right: 4px; vertical-align: text-bottom;"
+            >
+              <path
+                fill="currentColor"
+                d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C7.8 12.16 7 10.63 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"
+              />
+            </svg>
+            {{ isChecking ? 'Checking...' : 'Check Impact' }}
+          </button>
+        </div>
+        <div class="editors-container" [class.split]="isSplitView">
+          <!-- Analyze Response Modal (read-only JSON only) -->
+          <div
+            class="impact-modal-backdrop"
+            *ngIf="showAnalyzeModal"
+            (click)="closeAnalyzeModal()"
+          ></div>
+          <div class="impact-modal" *ngIf="showAnalyzeModal">
+            <div class="impact-modal-header">
+              <div class="modal-title-group">
+                <span>Impacted Files</span>
+                <div class="modal-controls">
+                  <button
+                    type="button"
+                    class="control-btn"
+                    (click)="expandAllAnalyze(); $event.stopPropagation()"
+                    title="Expand all"
+                  >
+                    Expand All
+                  </button>
+                  <button
+                    type="button"
+                    class="control-btn"
+                    (click)="collapseAllAnalyze(); $event.stopPropagation()"
+                    title="Collapse all"
+                  >
+                    Collapse All
+                  </button>
+                </div>
+              </div>
+              <button type="button" class="close-modal-btn" (click)="closeAnalyzeModal()">
+                &times;
+              </button>
+            </div>
+            <div class="impact-modal-content">
+              <ng-container *ngIf="analyzeTreeData && analyzeTreeData.length; else jsonView">
+                <div class="analyze-tree" tabindex="0">
+                  <ng-container
+                    *ngTemplateOutlet="treeTpl; context: { $implicit: analyzeTreeData }"
+                  ></ng-container>
+                </div>
+                <ng-template #treeTpl let-nodes>
+                  <ul class="tree-root">
+                    <li
+                      *ngFor="let node of nodes"
+                      [class.folder]="node.children && node.children.length"
+                      [class.file]="!node.children || node.children.length === 0"
+                      [class.changed]="!node.children || node.children.length === 0"
+                      [attr.title]="
+                        (node.key || node.name) +
+                        (node.count ? ' — ' + node.count + ' changed' : '')
+                      "
+                    >
+                      <div class="analyze-node-row" (click)="onAnalyzeNodeClick(node, $event)">
+                        <button
+                          *ngIf="node.children && node.children.length"
+                          type="button"
+                          class="node-toggle"
+                          (click)="toggleAnalyzeNode(node.key, $event)"
+                        >
+                          {{ isAnalyzeNodeExpanded(node.key) ? '▾' : '▸' }}
+                        </button>
+                        <span class="node-icon">{{
+                          node.children && node.children.length ? '📁' : '📘'
+                        }}</span>
+                        <span class="node-name">{{ node.name }}</span>
+                        <span class="node-count" *ngIf="node.count">({{ node.count }})</span>
+                      </div>
+                      <ng-container
+                        *ngIf="
+                          node.children &&
+                          node.children.length &&
+                          isAnalyzeNodeExpanded(node.key)
+                        "
+                      >
+                        <ng-container
+                          *ngTemplateOutlet="treeTpl; context: { $implicit: node.children }"
+                        ></ng-container>
+                      </ng-container>
+                    </li>
+                  </ul>
+                </ng-template>
+              </ng-container>
+              <ng-template #jsonView>
+                <div class="impact-json" tabindex="0" aria-readonly="true">
+                  <div class="json-header">Response (read-only)</div>
+                  <pre class="json-pre">{{ analyzeResult | json }}</pre>
+                </div>
+              </ng-template>
+            </div>
+          </div>
+
+          <!-- Check Impact Modal (visualization) -->
+          <div
+            class="impact-modal-backdrop fullscreen"
+            *ngIf="impactResult"
+            (click)="impactResult = null"
+          ></div>
+          <div class="impact-modal fullscreen" *ngIf="impactResult">
+            <div class="impact-modal-header">
+              <div style="display:flex; flex-direction:column; flex:1;">
+                <div style="font-size:20px; font-weight:600; margin-bottom:8px;">
+                  Impact Analysis Report for "{{ impactAnalysisTitle }}" Changes
+                </div>
+                <div style="font-size:14px; opacity:0.85;">
+                  {{ impactChangedCount }} changed members/constants identified.
+                </div>
+              </div>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <button
+                  *ngIf="impactResult"
+                  type="button"
+                  class="download-btn"
+                  (click)="downloadCheckImpactReport()"
+                >
+                  Download JSON
+                </button>
+                <button
+                  *ngIf="impactResult"
+                  type="button"
+                  class="download-html-btn"
+                  (click)="downloadCheckImpactReportHtml()"
+                >
+                  Download HTML
+                </button>
+                <button
+                  *ngIf="impactResult"
+                  type="button"
+                  class="download-svg-btn"
+                  (click)="downloadVisualizationSvg()"
+                >
+                  Download SVG
+                </button>
+                <button type="button" class="close-modal-btn" (click)="impactResult = null">
+                  &times;
+                </button>
+              </div>
+            </div>
+            <div class="impact-modal-content">
+              <div class="impact-tree-grid">
+                <div class="impact-left">
+                  <!-- Critical Risk Badge -->
+                  <div class="critical-risk-badge" *ngIf="impactMaxRiskScore >= 8">
+                    <div class="risk-icon">🔥</div>
+                    <div class="risk-text">
+                      <div class="risk-label">Critical ({{ impactMaxRiskScore }}/10)</div>
+                    </div>
+                  </div>
+
+                  <!-- Changed Members List -->
+                  <div class="changed-members-list">
+                    <div
+                      *ngFor="let member of impactChangedMembers"
+                      class="member-item"
+                      [class.selected]="selectedChangedMember === member"
+                      (click)="selectChangedMember(member, $event)"
+                    >
+                      <div class="member-header">
+                        <span class="member-icon">{{
+                          getIconForMemberType(member.memberType)
+                        }}</span>
+                        <span class="member-name">{{ member.changedMember }}</span>
+                      </div>
+                      <div class="member-meta">
+                        <span class="member-type">({{ member.memberType }})</span>
+                        <span class="member-risk" [class]="getRiskBadgeClass(member.riskScore)">
+                          Risk: {{ member.riskScore }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="impact-right">
+                  <!-- Detail Panel showing selected member details -->
+                  <div class="detail-pane" *ngIf="selectedChangedMember">
+                    <div class="detail-header-new">
+                      <div class="method-title-section">
+                        <div class="method-label">
+                          {{ selectedChangedMember.memberType }} :
+                          {{ selectedChangedMember.changedMember }}
+                        </div>
+                        <div class="risk-score-section">
+                          <span class="risk-label">Risk Score:</span>
+                          <span class="risk-value">{{ selectedChangedMember.riskScore }}</span>
+                          <span class="risk-max">/ 10</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="detail-body">
+                      <!-- Reasoning Section -->
+                      <div class="detail-section reasoning-section">
+                        <strong>Reasoning:</strong>
+                        <div
+                          class="detail-text"
+                          *ngIf="
+                            reasoningBullets && reasoningBullets.length > 0;
+                            else noReasoning
+                          "
+                        >
+                          <ol class="reason-list">
+                            <li *ngFor="let b of reasoningBullets">{{ b }}</li>
+                          </ol>
+                        </div>
+                        <ng-template #noReasoning>
+                          <div class="detail-text">No reasoning provided.</div>
+                        </ng-template>
+                      </div>
+
+                      <!-- Actionable Impacts Section -->
+                      <div class="detail-section impacts-section">
+                        <div class="section-header">
+                          <span class="impact-icon">🔥</span>
+                          <strong>Actionable Impacts</strong>
+                        </div>
+                        <table
+                          class="impacts-table"
+                          *ngIf="
+                            selectedChangedMember.actionableImpacts &&
+                            selectedChangedMember.actionableImpacts.length
+                          "
+                        >
+                          <thead>
+                            <tr>
+                              <th>Impact Type</th>
+                              <th>Issue Description</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr
+                              *ngFor="let impact of selectedChangedMember.actionableImpacts"
+                              [class]="
+                                'impact-row-' +
+                                impact.impactType.toLowerCase().replace('_', '-')
+                              "
+                            >
+                              <td class="impact-type">
+                                <span
+                                  class="impact-badge"
+                                  [class]="
+                                    'badge-' + impact.impactType.toLowerCase().replace('_', '-')
+                                  "
+                                >
+                                  {{
+                                    impact.impactType === 'SYNTACTIC_BREAK'
+                                      ? '⭕'
+                                      : impact.impactType === 'SEMANTIC_BREAK'
+                                      ? '⭕'
+                                      : '⚠️'
+                                  }}
+                                  {{ impact.moduleName || 'N/A' }}
+                                </span>
+                              </td>
+                              <td class="impact-description">
+                                {{ impact.issue || 'No description' }}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <!-- Suggested Test Strategy Section -->
+                      <div
+                        class="detail-section test-strategy-section"
+                        *ngIf="selectedChangedMember.testStrategy"
+                      >
+                        <div class="section-header">
+                          <span class="strategy-icon">🧪</span>
+                          <strong>Suggested Test Strategy</strong>
+                          <div class="strategy-download-actions">
+                            <button
+                              type="button"
+                              class="download-strategy-btn"
+                              (click)="downloadTestStrategyTable()"
+                              title="Download as Table (CSV)"
+                            >
+                              📊 Download as Table
+                            </button>
+                            <button
+                              type="button"
+                              class="download-strategy-btn"
+                              (click)="downloadTestStrategyHTML()"
+                              title="Download as HTML"
+                            >
+                              📄 Download as HTML
+                            </button>
+                          </div>
+                        </div>
+                        <div class="strategy-content">
+                          <div class="strategy-item">
+                            <strong>Scope & Priority:</strong>
+                            <div class="strategy-text">
+                              {{ selectedChangedMember.testStrategy.scope || 'N/A' }}
+                            </div>
+                            <div
+                              class="priority-badge"
+                              *ngIf="selectedChangedMember.testStrategy.priority"
+                            >
+                              <span
+                                [class]="
+                                  'priority-' +
+                                  (
+                                    selectedChangedMember.testStrategy.priority || ''
+                                  ).toLowerCase()
+                                "
+                              >
+                                {{ selectedChangedMember.testStrategy.priority }}
+                              </span>
+                            </div>
+                          </div>
+                          <div
+                            class="strategy-item"
+                            *ngIf="
+                              selectedChangedMember.testStrategy.testCasesRequired &&
+                              selectedChangedMember.testStrategy.testCasesRequired.length
+                            "
+                          >
+                            <strong>Test Cases Required:</strong>
+                            <ul class="test-cases-list">
+                              <li
+                                *ngFor="
+                                  let testCase of selectedChangedMember.testStrategy
+                                    .testCasesRequired
+                                "
+                              >
+                                <div class="test-case-module">
+                                  {{ testCase.moduleName || 'N/A' }}
+                                </div>
+                                <div class="test-case-type">
+                                  {{ testCase.testType || 'N/A' }}
+                                </div>
+                                <div class="test-case-focus">{{ testCase.focus || 'N/A' }}</div>
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Placeholder when no member selected -->
+                  <div *ngIf="!selectedChangedMember" class="detail-placeholder">
+                    Select a changed member from the list to view details
+                  </div>
+
+                  <!-- Graph Visualization Section (always visible) -->
+                  <div
+                    class="viz-section"
+                    *ngIf="impactResult && impactTree && impactTree.length"
+                  >
+                    <div class="viz-header">
+                      <h3>Impact Dependency Graph</h3>
+                      <p class="viz-description">
+                        Interactive visualization showing the impact propagation across modules
+                      </p>
+                    </div>
+                    <div class="viz-compact">
+                      <app-impact-visualization
+                        [impactData]="impactResult"
+                        (nodeClick)="onImpactNodeClick($event)"
+                      ></app-impact-visualization>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Main editor or diff view -->
+          <div class="editor-section" [class.left-pane]="isSplitView">
+            <div class="panel-header header-text-color">
+              {{ selectedFile?.name || 'No file selected' }}
+            </div>
+            <!-- Show file content -->
+            <div class="editor-content" *ngIf="selectedFile" [class.readonly]="isSplitView">
+              <div *ngIf="isSplitView" class="diff-panel">
+                <div class="diff-view">
+                  <div *ngFor="let line of diffLines">
+                    <pre class="diff-line" [class]="'diff-' + line.type">{{
+                      line.content
+                    }}</pre>
+                  </div>
+                </div>
+              </div>
+              <textarea
+                *ngIf="!isSplitView"
+                class="file-editor"
+                [(ngModel)]="selectedFile!.content"
+                [readonly]="!isSplitView"
+                [class.readonly]="!isSplitView"
+              ></textarea>
+            </div>
+            <!-- Show placeholder when no file selected -->
+            <div class="editor-placeholder" *ngIf="!selectedFile">
+              <p>Select a file from the tree to view or edit its content</p>
+            </div>
+          </div>
+          <!-- Compare editor -->
+          <div class="editor-section right-pane" *ngIf="isSplitView">
+            <div class="panel-header header-text-color">
+              <span>Compare</span>
+            </div>
+            <div class="editor-content" [class.readonly]="!isSplitView">
+              <textarea
+                class="file-editor"
+                [(ngModel)]="secondaryContent"
+                (ngModelChange)="onSecondaryContentChange($any($event))"
+                [readonly]="!isSplitView"
+              ></textarea>
+            </div>
+            <!-- Impact response now shown in slider -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <app-landing-loader *ngIf="isLoading"></app-landing-loader>
+</div>
+<!-- Anchored After-Analyze popup (anchored above the button). No backdrop; user must close manually. -->
+<!-- Centered After-Analyze popup (always use centered modal to avoid placement/top-left issues) -->
+<div
+  class="after-analyze-backdrop"
+  *ngIf="showAfterAnalyzePopup"
+  (click)="closeAfterAnalyzePopup()"
+>
+  <div class="after-analyze-popup" (click)="$event.stopPropagation()">
+    <div class="popup-text">
+      File "{{ selectedFile?.name || 'Comparison' }}" selected. Enter input and submit:
+    </div>
+    <textarea
+      class="after-analyze-input"
+      [(ngModel)]="afterAnalyzeText"
+      rows="6"
+      placeholder="Enter input text..."
+    ></textarea>
+    <div class="popup-actions">
+      <button
+        type="button"
+        class="run-btn"
+        (click)="runAfterAnalyzeAction()"
+        [disabled]="!afterAnalyzeText || isAfterAnalyzeRunning"
+      >
+        {{ isAfterAnalyzeRunning ? 'Submitting...' : 'Submit' }}
+      </button>
+      <button
+        *ngIf="afterAnalyzeSuccess && !isAfterAnalyzeRunning"
+        type="button"
+        class="download-btn"
+        (click)="downloadImpactReport()"
+      >
+        Download JSON
+      </button>
+      <button
+        *ngIf="afterAnalyzeSuccess && !isAfterAnalyzeRunning"
+        type="button"
+        class="download-html-btn"
+        (click)="downloadImpactReportHtml()"
+      >
+        Download HTML
+      </button>
+      <button
+        *ngIf="afterAnalyzeSuccess && !isAfterAnalyzeRunning"
+        type="button"
+        class="close-btn"
+        (click)="closeAfterAnalyzePopup()"
+      >
+        Close
+      </button>
+    </div>
+    <div *ngIf="afterAnalyzeSuccess" class="after-analyze-response" style="margin-top:8px;">
+      <div class="response-pre">{{ afterAnalyzeResponse | json }}</div>
+    </div>
+  </div>
+</div>
