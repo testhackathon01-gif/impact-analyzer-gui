@@ -10,6 +10,27 @@ import { ApiResponse, DropdownItem } from '../interfaces/dropdown-data.interface
 export class DropdownService {
   private http = inject(HttpClient);
 
+  // Convert a repository URL into a user-friendly display name.
+  // Example: 'https://github.com/owner/consumer-service' -> 'Consumer-service'
+  private formatRepoDisplayName(repoUrl: string): string {
+    if (!repoUrl) return '';
+    try {
+      // strip query/hash
+      const noQuery = repoUrl.split(/[?#]/)[0];
+      // remove trailing slashes
+      const trimmed = noQuery.replace(/\/+$|\/+$/g, '/').replace(/\/+$/g, '');
+      // take last segment after '/'
+      const parts = trimmed.split('/').filter(Boolean);
+      let last = parts.length ? parts[parts.length - 1] : trimmed;
+      // strip .git suffix if present
+      if (last.endsWith('.git')) last = last.slice(0, -4);
+      last = decodeURIComponent(last);
+      return last.length ? last.charAt(0).toUpperCase() + last.slice(1) : last;
+    } catch {
+      return repoUrl;
+    }
+  }
+
   // Fetch repository mapping from external analyzer service, transform to { status, data, details }
   // The external API is expected to return an object where keys are repository URLs and values
   // are maps of fully-qualified-class-name -> source string.
@@ -41,8 +62,10 @@ export class DropdownService {
 
           for (const repoUrl of repoKeys) {
             const repoObj = raw[repoUrl] ?? {};
-            // dropdown should show the full key (repo URL)
-            data.push({ id: idx, name: repoUrl });
+            // dropdown should show a friendly name (last path segment of the repo URL)
+            const displayName = this.formatRepoDisplayName(repoUrl);
+            // include the original repo URL on the dropdown item so consumers can send the full URL
+            data.push({ id: idx, name: displayName, url: repoUrl });
 
             // Build a package-folder tree from fully-qualified class names for this repo
             const packageRootChildren: any[] = [];
@@ -61,7 +84,8 @@ export class DropdownService {
             }
 
             // assign details for this id; files contain the package-root children (e.g., com -> app -> analytics)
-            details[String(idx)] = { id: idx, name: repoUrl, url: repoUrl, description: '', files: packageRootChildren };
+            // keep the original URL in the details.url, but store the friendly name for display
+            details[String(idx)] = { id: idx, name: displayName, url: repoUrl, description: '', files: packageRootChildren };
             idx++;
           }
 

@@ -577,7 +577,8 @@ export class LandingComponent implements OnInit {
       return;
     }
 
-    const compareRepositoryUrls = this.selectedRepos.map((r) => r.name);
+  // send full URLs to the analyzer backend (use r.url if present, fallback to name)
+  const compareRepositoryUrls = this.selectedRepos.map((r) => (r as any).url || r.name);
     const targetFilename = this.selectedFile.name;
     const localFilePath = this.findPathForSelectedFile() || `/mock/path/${targetFilename}`;
 
@@ -599,8 +600,9 @@ export class LandingComponent implements OnInit {
         /* ignore */
       }
     }, 0);
+    // selectedRepository should be the actual repo URL (not the user-facing label)
     const sourceRepo =
-      this.getSelectedItemName() ||
+      this.getSelectedItemUrl() ||
       (compareRepositoryUrls && compareRepositoryUrls.length ? compareRepositoryUrls[0] : null);
 
     const postPayload: any = {
@@ -1503,6 +1505,12 @@ export class LandingComponent implements OnInit {
     return item?.name || '';
   }
 
+  // Return the original URL (if available) for the currently selected item.
+  getSelectedItemUrl(): string {
+    const item = this.dropdownItems.find((it) => it.id.toString() === this.selectedItemId);
+    return (item as any)?.url || item?.name || '';
+  }
+
   getFileIcon(node: FileNode): string {
     if (node.type === 'folder') {
       return node.isExpanded ? '📂' : '📁';
@@ -1623,9 +1631,9 @@ export class LandingComponent implements OnInit {
     this.isBlockingUI = true;
     this.impactResult = null;
 
-    const sourceRepo = this.getSelectedItemName() || null;
-    const compareRepoNames = Array.from(this.selectedRepoIds || []).map(
-      (id) => this.dropdownItems.find((d) => d.id === id)?.name ?? String(id)
+    const sourceRepo = this.getSelectedItemUrl() || null;
+    const compareRepoNames = Array.from(this.selectedRepoIds || []).map((id) =>
+      (this.dropdownItems.find((d) => d.id === id) as any)?.url || this.dropdownItems.find((d) => d.id === id)?.name || String(id)
     );
 
     const afterMsg =
